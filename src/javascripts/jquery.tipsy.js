@@ -18,6 +18,8 @@
     
     Tipsy.prototype = {
         show: function() {
+            clearTimeout(this.showTimeout);
+            clearTimeout(this.hideTimeout);
             var title = this.getTitle();
             if (title && this.enabled) {
                 var $tip = this.tip();
@@ -74,6 +76,8 @@
         },
         
         hide: function() {
+            clearTimeout(this.showTimeout);
+            clearTimeout(this.hideTimeout);
             if (this.options.fade) {
                 this.tip().stop().fadeOut(function() { $(this).remove(); });
             } else {
@@ -149,7 +153,7 @@
                 tipsy.show();
             } else {
                 tipsy.fixTitle();
-                setTimeout(function() { if (tipsy.hoverState == 'in') tipsy.show(); }, options.delayIn);
+                tipsy.showTimeout = setTimeout(function() { if (tipsy.hoverState == 'in') tipsy.show(); }, options.delayIn);
             }
         };
         
@@ -159,7 +163,7 @@
             if (options.delayOut == 0) {
                 tipsy.hide();
             } else {
-                setTimeout(function() { if (tipsy.hoverState == 'out') tipsy.hide(); }, options.delayOut);
+                tipsy.hideTimeout = setTimeout(function() { if (tipsy.hoverState == 'out') tipsy.hide(); }, options.delayOut);
             }
         };
         

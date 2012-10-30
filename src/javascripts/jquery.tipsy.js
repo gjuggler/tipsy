@@ -17,9 +17,20 @@
     };
     
     Tipsy.prototype = {
+        getEl: function() {
+          var el = this.$element;
+          if (this.delegatedEl) {
+            //console.log('tipsy has delegate el');
+            el = $(this.delegatedEl);
+          }
+          return el;
+        },
         show: function() {
+          var el = this.getEl();
+
             clearTimeout(this.showTimeout);
             clearTimeout(this.hideTimeout);
+            this.isShown = true;
             var title = this.getTitle();
             if (title && this.enabled) {
                 var $tip = this.tip();
@@ -28,14 +39,14 @@
                 $tip[0].className = 'tipsy'; // reset classname in case of dynamic gravity
                 $tip.remove().css({top: 0, left: 0, visibility: 'hidden', display: 'block'}).prependTo(document.body);
                 
-                var pos = $.extend({}, this.$element.offset(), {
-                    width: this.$element[0].offsetWidth,
-                    height: this.$element[0].offsetHeight
+                var pos = $.extend({}, el.offset(), {
+                    width: el[0].offsetWidth,
+                    height: el[0].offsetHeight
                 });
                 
                 var actualWidth = $tip[0].offsetWidth,
                     actualHeight = $tip[0].offsetHeight,
-                    gravity = maybeCall(this.options.gravity, this.$element[0]);
+                    gravity = maybeCall(this.options.gravity, el[0]);
                 
                 var tp;
                 switch (gravity.charAt(0)) {
@@ -64,7 +75,7 @@
                 $tip.css(tp).addClass('tipsy-' + gravity);
                 $tip.find('.tipsy-arrow')[0].className = 'tipsy-arrow tipsy-arrow-' + gravity.charAt(0);
                 if (this.options.className) {
-                    $tip.addClass(maybeCall(this.options.className, this.$element[0]));
+                    $tip.addClass(maybeCall(this.options.className, el[0]));
                 }
                 
                 if (this.options.fade) {
@@ -78,6 +89,7 @@
         hide: function() {
             clearTimeout(this.showTimeout);
             clearTimeout(this.hideTimeout);
+            this.isShown = false;
             if (this.options.fade) {
                 this.tip().stop().fadeOut(function() { $(this).remove(); });
             } else {
@@ -86,14 +98,16 @@
         },
         
         fixTitle: function() {
-            var $e = this.$element;
+          var el = this.getEl();
+            var $e = el;
             if ($e.attr('title') || typeof($e.attr('original-title')) != 'string') {
                 $e.attr('original-title', $e.attr('title') || '').removeAttr('title');
             }
         },
         
         getTitle: function() {
-            var title, $e = this.$element, o = this.options;
+            var $e = this.getEl();
+            var title, o = this.options;
             this.fixTitle();
             var title, o = this.options;
             if (typeof o.title == 'string') {
@@ -113,7 +127,8 @@
         },
         
         validate: function() {
-            if (!this.$element[0].parentNode) {
+          var el = this.getEl();
+            if (!el.parentNode) {
                 this.hide();
                 this.$element = null;
                 this.options = null;
@@ -145,6 +160,20 @@
             }
             return tipsy;
         }
+
+        function enterDelegate(event) {
+          var el = event.currentTarget;
+          var tipsy = get(this);
+          tipsy.delegatedEl = el;
+          enter.call(this);
+        };
+
+        function leaveDelegate(event) {
+          var el = event.currentTarget;
+          var tipsy = get(this);
+          tipsy.delegatedEl = el;
+          leave.call(this);
+        };
         
         function enter() {
             var tipsy = get(this);
@@ -172,11 +201,19 @@
         if (options.trigger != 'manual') {
             var eventIn  = options.trigger == 'hover' ? 'mouseenter' : 'focus',
                 eventOut = options.trigger == 'hover' ? 'mouseleave' : 'blur';
+
             if (options.delegate) {
-                this.delegate(options.delegate, eventIn, enter).delegate(options.delegate, eventOut, leave);
+              var me = this;
+              this.on(eventIn, options.delegate, function(event) {
+                enterDelegate.call(me, event);
+              });
+              this.on(eventOut, options.delegate, function(event) {
+                leaveDelegate.call(me, event);
+              });
+
             } else {
-                var binder = options.live ? 'live' : 'bind';
-                this[binder](eventIn, enter)[binder](eventOut, leave);
+              var binder = options.live ? 'live' : 'bind';
+              this[binder](eventIn, enter)[binder](eventOut, leave);
             }
         }
         

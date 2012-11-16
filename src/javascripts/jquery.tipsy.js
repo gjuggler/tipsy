@@ -178,17 +178,27 @@
         function enter() {
             var tipsy = get(this);
             tipsy.hoverState = 'in';
-            if (options.delayIn == 0) {
+            if (options.delayIn == 0 || tipsy.quickShowState === 'in') {
                 tipsy.show();
             } else {
                 tipsy.fixTitle();
                 tipsy.showTimeout = setTimeout(function() { if (tipsy.hoverState == 'in') tipsy.show(); }, options.delayIn);
             }
+
+            clearTimeout(tipsy.quickShowTimeout);
+            tipsy.quickShowState = 'in';
+            console.log("Quickshow in");
         };
         
         function leave() {
             var tipsy = get(this);
             tipsy.hoverState = 'out';
+
+            tipsy.quickShowTimeout = setTimeout(function() {
+              console.log("Quickshow out");
+              tipsy.quickShowState = 'out';
+            }, options.quickShowDelay);
+
             if (options.delayOut == 0) {
                 tipsy.hide();
             } else {
@@ -225,6 +235,7 @@
         className: null,
         delayIn: 0,
         delayOut: 0,
+        quickShowDelay: 500,
         fade: false,
         fallback: '',
         gravity: 'n',
@@ -246,13 +257,20 @@
     };
     
     $.fn.tipsy.autoNS = function() {
-        return $(this).offset().top > ($(document).scrollTop() + $(window).height() / 2) ? 's' : 'n';
+        return $(this).offset().top > ($(document).scrollTop() + 50) ? 's' : 'n';
     };
     
     $.fn.tipsy.autoWE = function() {
-        return $(this).offset().left > ($(document).scrollLeft() + $(window).width() / 2) ? 'e' : 'w';
+        return $(this).offset().left > ($(document).scrollLeft() + 50) ? 'e' : 'w';
     };
     
+    $.fn.tipsy.autoNESW = function() {
+    var $elm = $(this);
+    var $e = $elm.offset().left > ($(document).scrollLeft() + 50) ? 'e' : 'w';
+    var $sn = $elm.offset().top > ($(document).scrollTop() + 50) ? 's' : 'n';
+        return $sn+''+$ew;
+    };
+
     /**
      * yields a closure of the supplied parameters, producing a function that takes
      * no arguments and is suitable for use as an autogravity function like so:

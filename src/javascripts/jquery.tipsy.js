@@ -18,15 +18,19 @@
     
     Tipsy.prototype = {
         getEl: function() {
-          var el = this.$element;
+          var el;
           if (this.delegatedEl) {
             //console.log('tipsy has delegate el');
             el = $(this.delegatedEl);
+          } else {
+            el = this.$element;
           }
           return el;
         },
         show: function() {
           var el = this.getEl();
+
+          this.quickShowState = 'in';
 
             clearTimeout(this.showTimeout);
             clearTimeout(this.hideTimeout);
@@ -174,20 +178,37 @@
           tipsy.delegatedEl = el;
           leave.call(this);
         };
+
+        function clickDelegate(event) {
+          var el = event.currentTarget;
+          var tipsy = get(this);
+          if (el === tipsy.delegatedEl) {
+            click.call(this);
+          }
+        };
         
         function enter() {
             var tipsy = get(this);
             tipsy.hoverState = 'in';
-            if (options.delayIn == 0 || tipsy.quickShowState === 'in') {
+
+            var delay = options.delayIn;
+            var el = tipsy.getEl();
+            if (el.attr('delayIn')) {
+              delay = el.attr('delayIn');
+            }
+
+            if (delay == 0 || tipsy.quickShowState === 'in') {
                 tipsy.show();
             } else {
                 tipsy.fixTitle();
-                tipsy.showTimeout = setTimeout(function() { if (tipsy.hoverState == 'in') tipsy.show(); }, options.delayIn);
+                tipsy.showTimeout = setTimeout(function() { 
+                  if (tipsy.hoverState == 'in') {
+                    tipsy.show(); 
+                  }
+                }, delay);
             }
 
             clearTimeout(tipsy.quickShowTimeout);
-            tipsy.quickShowState = 'in';
-            console.log("Quickshow in");
         };
         
         function leave() {
@@ -195,7 +216,6 @@
             tipsy.hoverState = 'out';
 
             tipsy.quickShowTimeout = setTimeout(function() {
-              console.log("Quickshow out");
               tipsy.quickShowState = 'out';
             }, options.quickShowDelay);
 
@@ -204,6 +224,16 @@
             } else {
                 tipsy.hideTimeout = setTimeout(function() { if (tipsy.hoverState == 'out') tipsy.hide(); }, options.delayOut);
             }
+        };
+
+        function click() {
+          var tipsy = get(this);
+          tipsy.hide();
+          tipsy.hoverState = 'out';
+          tipsy.quickShowState = 'out';
+          clearTimeout(tipsy.quickShowTimeout);
+          clearTimeout(tipsy.showTimeout);
+          clearTimeout(tipsy.hideTimeout);
         };
         
         if (!options.live && !options.delegate) this.each(function() { get(this); });
@@ -220,6 +250,10 @@
               this.on(eventOut, options.delegate, function(event) {
                 leaveDelegate.call(me, event);
               });
+              this.on('click', options.delegate, function(event) {
+                clickDelegate.call(me, event);
+              });
+
 
             } else {
               var binder = options.live ? 'live' : 'bind';
